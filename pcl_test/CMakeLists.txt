@@ -16,6 +16,7 @@ find_package(catkin REQUIRED
    image_transport
    pcl_conversions
    pcl_ros
+   geometry_msgs
 )
 find_package(PCL REQUIRED)
 MESSAGE(STATUS "This is SOURCE dir" ${PROJECT_SOURCE_DIR})
@@ -144,9 +145,14 @@ target_link_libraries(pcl_test
 
 add_executable(pcl_filter ${PROJECT_SOURCE_DIR}/src/filter.cpp)
 
-
-## Specify libraries to link a library or executable target against
 target_link_libraries(pcl_filter
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+)
+
+add_executable(normal_pub_node ${PROJECT_SOURCE_DIR}/src/normal_pub.cpp)
+
+target_link_libraries(normal_pub_node
    ${PCL_LIBRARIES} 
    ${catkin_LIBRARIES}
 )
