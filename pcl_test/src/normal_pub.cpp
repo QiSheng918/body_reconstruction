@@ -29,25 +29,27 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
  
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals(new pcl::PointCloud<pcl::PointXYZINormal>);
 	pcl::concatenateFields(*cloud, *pcNormal, *cloud_with_normals);
-	geometry_msgs::PoseArray msg;
-	msg.header.frame_id="base_link";
+	// geometry_msgs::PoseArray msg;
+	sensor_msgs::PointCloud2 msg;
+	msg.header.frame_id="kinect_link";
 	msg.header.stamp=ros::Time::now();
-	msg.poses.resize(2);
-	msg.poses[0].position.x=0;
-	msg.poses[0].position.y=0;
-	msg.poses[0].position.z=1;
-	msg.poses[0].orientation.x=0;
-	msg.poses[0].orientation.y=0;
-	msg.poses[0].orientation.z=0;
-	msg.poses[0].orientation.w=1;
+	pcl::toROSMsg(*cloud_with_normals, msg);
+	// msg.poses.resize(2);
+	// msg.poses[0].position.x=0;
+	// msg.poses[0].position.y=0;
+	// msg.poses[0].position.z=1;
+	// msg.poses[0].orientation.x=0;
+	// msg.poses[0].orientation.y=0;
+	// msg.poses[0].orientation.z=0;
+	// msg.poses[0].orientation.w=1;
 
-	msg.poses[1].position.x=0;
-	msg.poses[1].position.y=0;
-	msg.poses[1].position.z=0.5;
-	msg.poses[1].orientation.x=0;
-	msg.poses[1].orientation.y=0;
-	msg.poses[1].orientation.z=1;
-	msg.poses[1].orientation.w=0;
+	// msg.poses[1].position.x=0;
+	// msg.poses[1].position.y=0;
+	// msg.poses[1].position.z=0.5;
+	// msg.poses[1].orientation.x=0;
+	// msg.poses[1].orientation.y=0;
+	// msg.poses[1].orientation.z=1;
+	// msg.poses[1].orientation.w=0;
 
 
     pcl_pub.publish(msg);
@@ -58,12 +60,12 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 
 int main(int argc, char* argv[])
 {
-	 ros::init(argc, argv, "my_pcl_tutorial");
+	 ros::init(argc, argv, "normal_pub");
      ros::NodeHandle nh;
 
  
      ros::Subscriber sub = nh.subscribe ("filter_output", 1, cloud_cb);
-	 pcl_pub= nh.advertise<geometry_msgs::PoseArray>("normal_output", 1);
+	 pcl_pub= nh.advertise<sensor_msgs::PointCloud2>("normal_output", 1);
      ros::spin();
 
  

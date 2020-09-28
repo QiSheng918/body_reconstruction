@@ -26,7 +26,7 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 	pcl::PassThrough<pcl::PointXYZ> pass;
   pass.setInputCloud (cloud);            //设置输入点云
   pass.setFilterFieldName ("z");         //设置过滤时所需要点云类型的Z字段
-  pass.setFilterLimits (0.0, 1.0);        //设置在过滤字段的范围
+  pass.setFilterLimits (0.5, 1.5);        //设置在过滤字段的范围
 //     pass.setFilterFieldName ("x");         //设置过滤时所需要点云类型的Z字段
 //   pass.setFilterLimits (-1.0, 1.0);        //设置在过滤字段的范围
 //       pass.setFilterFieldName ("y");         //设置过滤时所需要点云类型的Z字段
@@ -40,7 +40,7 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
      sensor_msgs::PointCloud2 output;
 	//  ros::Time::
 	 output.header.stamp=ros::Time::now();
-    output.header.frame_id = "world";
+    output.header.frame_id = "kinect_link";
     pcl::toROSMsg(*cloud_filtered, output);
     pcl_pub.publish(output);
 
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
      ros::NodeHandle nh;
 
  
-     ros::Subscriber sub = nh.subscribe ("/camera/depth/color/points", 1, cloud_cb);
+     ros::Subscriber sub = nh.subscribe ("/camera/depth/points", 1, cloud_cb);
 	 pcl_pub= nh.advertise<sensor_msgs::PointCloud2> ("filter_output", 1);
      ros::spin();
 

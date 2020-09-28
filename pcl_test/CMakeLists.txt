@@ -151,8 +151,13 @@ target_link_libraries(pcl_filter
 )
 
 add_executable(normal_pub_node ${PROJECT_SOURCE_DIR}/src/normal_pub.cpp)
-
 target_link_libraries(normal_pub_node
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+)
+
+add_executable(linear_normal_pub_node ${PROJECT_SOURCE_DIR}/src/linear_normal_pub.cpp)
+target_link_libraries(linear_normal_pub_node
    ${PCL_LIBRARIES} 
    ${catkin_LIBRARIES}
 )
