@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(pcl_test)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -158,6 +158,12 @@ target_link_libraries(normal_pub_node
 
 add_executable(linear_normal_pub_node ${PROJECT_SOURCE_DIR}/src/linear_normal_pub.cpp)
 target_link_libraries(linear_normal_pub_node
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+)
+
+add_executable(hash_test_node ${PROJECT_SOURCE_DIR}/src/hash_test.cpp)
+target_link_libraries(hash_test_node
    ${PCL_LIBRARIES} 
    ${catkin_LIBRARIES}
 )

@@ -25,45 +25,7 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 	// pcl::PointCloud<pcl::PointNormal>::Ptr output_cloud(new pcl::PointCloud<pcl::PointNormal>);
     pcl::fromROSMsg (*input, *cloud);
 
-	// pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients());
-	// coefficients->values.resize(4);
-	// coefficients->values[0] = coefficients->values[1] = 0;
-	// coefficients->values[2] = 1.0;
-	// coefficients->values[3] = -1;
-
-
-	// pcl::PointIndices::Ptr inliers(new pcl::PointIndices); //存储内点，使用的点
-
-	// pcl::SACSegmentation<pcl::PointNormal> seg;
-	// //可选设置
-	// seg.setOptimizeCoefficients(true);
-	// //必须设置
-	// seg.setModelType(pcl::SACMODEL_PLANE); //设置模型类型，检测平面
-	// seg.setMethodType(pcl::SAC_RANSAC);      //设置方法【聚类或随机样本一致性】
-	// seg.setMaxIterations(100);
-	// seg.setDistanceThreshold(0.01);
-	// seg.setInputCloud(cloud);
-	// seg.segment(*inliers, *coefficients);    //分割操作
-
-    // if (inliers->indices.size() == 0)
-    // {
-    //     PCL_ERROR("Could not estimate a planar model for the given dataset.");
-    //     return;
-    // }
-
-	// pcl::ExtractIndices<pcl::PointNormal> extract;
-	// extract.setInputCloud(cloud);
-	// extract.setIndices(inliers);
-	// //除去平面之外的数据
-	// extract.setNegative(true);
-	// extract.filter(*output_cloud);
-
-	// sensor_msgs::PointCloud2 msg;
-	// msg.header.stamp=ros::Time::now();
-    // msg.header.frame_id = "kinect_link";
-	// pcl::toROSMsg(*output_cloud, msg);
-	// pcl_pub.publish(msg);
-
+	
 	pcl::KdTreeFLANN<pcl::PointNormal> kdtree;
 	kdtree.setInputCloud(cloud);
 	std::vector<int> pointIdxNKNSearch;
