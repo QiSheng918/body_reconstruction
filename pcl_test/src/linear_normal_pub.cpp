@@ -15,133 +15,89 @@
 #include <geometry_msgs/PoseArray.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <vector>
+#include <geometry_msgs/Pose.h>
+#include <visualization_msgs/Marker.h>
+#include <geometry_msgs/Point.h>
 
-
+using namespace std;
 ros::Publisher pcl_pub;
+ros::Publisher marker_pub;
 void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 {
-	ROS_INFO("hello world");
+	
     pcl::PointCloud<pcl::PointNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointNormal>);
-	// pcl::PointCloud<pcl::PointNormal>::Ptr output_cloud(new pcl::PointCloud<pcl::PointNormal>);
     pcl::fromROSMsg (*input, *cloud);
 
-	// pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients());
-	// coefficients->values.resize(4);
-	// coefficients->values[0] = coefficients->values[1] = 0;
-	// coefficients->values[2] = 1.0;
-	// coefficients->values[3] = -1;
-
-
-	// pcl::PointIndices::Ptr inliers(new pcl::PointIndices); //存储内点，使用的点
-
-	// pcl::SACSegmentation<pcl::PointNormal> seg;
-	// //可选设置
-	// seg.setOptimizeCoefficients(true);
-	// //必须设置
-	// seg.setModelType(pcl::SACMODEL_PLANE); //设置模型类型，检测平面
-	// seg.setMethodType(pcl::SAC_RANSAC);      //设置方法【聚类或随机样本一致性】
-	// seg.setMaxIterations(100);
-	// seg.setDistanceThreshold(0.01);
-	// seg.setInputCloud(cloud);
-	// seg.segment(*inliers, *coefficients);    //分割操作
-
-    // if (inliers->indices.size() == 0)
-    // {
-    //     PCL_ERROR("Could not estimate a planar model for the given dataset.");
-    //     return;
-    // }
-
-	// pcl::ExtractIndices<pcl::PointNormal> extract;
-	// extract.setInputCloud(cloud);
-	// extract.setIndices(inliers);
-	// //除去平面之外的数据
-	// extract.setNegative(true);
-	// extract.filter(*output_cloud);
-
-	// sensor_msgs::PointCloud2 msg;
-	// msg.header.stamp=ros::Time::now();
-    // msg.header.frame_id = "kinect_link";
-	// pcl::toROSMsg(*output_cloud, msg);
-	// pcl_pub.publish(msg);
-
-	pcl::KdTreeFLANN<pcl::PointNormal> kdtree;
-	kdtree.setInputCloud(cloud);
-	std::vector<int> pointIdxNKNSearch;
-	std::vector<float> pointNKNSquaredDistance;
-
-	double x_min=-0.5;
-	double x_max=0.5;
-	double delta_x=0.01;
-	pcl::PointNormal searchPoint = cloud->at(0);
-	float radius = 0.01;	
-	int K = 10;	
+	vector<vector<double> >  normal_vec(10000,vector<double>(5,0));
+	for(int i=0;i<cloud->points.size();i++){
+		int m=int(cloud->points[i].x*50+50)*100+int(cloud->points[i].y*50+50);
+		normal_vec[m][0]+=cloud->points[i].z;
+		normal_vec[m][1]+=cloud->points[i].normal_x;
+		normal_vec[m][2]+=cloud->points[i].normal_y;
+		normal_vec[m][3]+=cloud->points[i].normal_z;
+		normal_vec[m][4]+=1;
+	}
+	ROS_INFO("hello world!");
 	geometry_msgs::PoseArray msg;
 	msg.header.frame_id="camera_depth_optical_frame";
 	msg.header.stamp=ros::Time::now();
-	msg.poses.resize(int((x_max-x_min)/delta_x));
-	int index=0;
+	double x_min=-0.4,x_max=0.4;
+	double delta_x=0.01;
+	double y=0;
+	visualization_msgs::Marker line_list;
+	line_list.header.frame_id = "camera_depth_optical_frame";
+    line_list.header.stamp = ros::Time::now();
+    line_list.ns = "lines";
+    line_list.action = visualization_msgs::Marker::ADD;
+    line_list.pose.orientation.w = 1.0;
+    line_list.id = 2;
+	line_list.type = visualization_msgs::Marker::LINE_LIST;
+	line_list.scale.x = 0.001;
+    // Line list is red
+    line_list.color.r = 1.0;
+    line_list.color.a = 1.0;
 	for(double x=x_min;x<x_max;x+=delta_x){
-		searchPoint.x=x;
-		searchPoint.y=0;
-		searchPoint.z=0;
-
-		double x_center,y_center,z_center;
-		std::vector<double> center(3,0);
-
-		if (kdtree.nearestKSearch(searchPoint, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
-		{
-			for (size_t i = 0; i < pointIdxNKNSearch.size(); ++i){
-				center[0]+=cloud->points[pointIdxNKNSearch[i]].x;
-				center[1]+=cloud->points[pointIdxNKNSearch[i]].y;
-				center[2]+=cloud->points[pointIdxNKNSearch[i]].z;
-				// cloud->points[pointIdxNKNSearch[i]].
-			}
-			for(int i=0;i<3;i++) center[i]/=pointIdxNKNSearch.size();
-			msg.poses[index].position.x=center[0];
-			msg.poses[index].position.y=center[1];
-			msg.poses[index].position.z=center[2];
-			msg.poses[index].orientation.x=0;
-			msg.poses[index].orientation.y=0;
-			msg.poses[index].orientation.z=0;
-			msg.poses[index].orientation.w=1;
-			index++;
-		}
+		int m=int(x*50+50)*100+int(y*50+50);
+		// geometry_msgs::Pose temp_pose;
+		geometry_msgs::Point p;
+		if(normal_vec[m][4]!=0){
+			p.x=x;
+			p.y=y;
+			p.z=normal_vec[m][0]/normal_vec[m][4];
+			line_list.points.push_back(p);
+		
+			// temp_pose.position.x=x;
+			// temp_pose.position.y=y;
+			// temp_pose.position.z=normal_vec[m][0]/normal_vec[m][4];
+			double v[3]={normal_vec[m][1]/normal_vec[m][4],normal_vec[m][2]/normal_vec[m][4],normal_vec[m][3]/normal_vec[m][4]};
+			double norm=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+			for(int i=0;i<3;i++) v[i]/=norm;
+			p.x+=0.1*v[0];
+			p.y+=0.1*v[1];
+			p.z+=0.1*v[2];
+			line_list.points.push_back(p);
+    		marker_pub.publish(line_list);
+			// for(int i=0;i<3;i++) v[i]/=norm;
+			// temp_pose.orientation.x=v[0]*sin(norm/2);
+			// temp_pose.orientation.y=v[1]*sin(norm/2);
+			// temp_pose.orientation.z=v[2]*sin(norm/2);
+			// temp_pose.orientation.w=cos(norm/2);
+			// msg.poses.push_back(temp_pose);
+			
+		}		
 	}
-	std::cout<<index<<std::endl;
-	std::cout<<msg.poses.size()<<std::endl;
-
-	// msg.header.frame_id="base_link";
-	// msg.header.stamp=ros::Time::now();
-	// msg.poses.resize(2);
-	// msg.poses[0].position.x=0;
-	// msg.poses[0].position.y=0;
-	// msg.poses[0].position.z=1;
-	// msg.poses[0].orientation.x=0;
-	// msg.poses[0].orientation.y=0;
-	// msg.poses[0].orientation.z=0;
-	// msg.poses[0].orientation.w=1;
-
-	// msg.poses[1].position.x=0;
-	// msg.poses[1].position.y=0;
-	// msg.poses[1].position.z=0.5;
-	// msg.poses[1].orientation.x=0;
-	// msg.poses[1].orientation.y=0;
-	// msg.poses[1].orientation.z=1;
-	// msg.poses[1].orientation.w=0;
-
-
     pcl_pub.publish(msg);
-	// pcl::io::savePCDFile("plane_cloud_out.pcd", *cloud_with_normals);
-	// ros::shutdown();
+
 }
 
 
 int main(int argc, char* argv[])
 {
-	 ros::init(argc, argv, "linear_normal_pub");
-     ros::NodeHandle nh;
+	ros::init(argc, argv, "linear_normal_pub");
+    ros::NodeHandle nh;
 
- 
+    marker_pub= nh.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+  	
      ros::Subscriber sub = nh.subscribe ("normal_output", 1, cloud_cb);
 	 pcl_pub= nh.advertise<geometry_msgs::PoseArray>("linear_normal_output", 1);
      ros::spin();

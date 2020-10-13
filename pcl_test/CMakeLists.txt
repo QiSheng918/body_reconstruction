@@ -17,6 +17,7 @@ find_package(catkin REQUIRED
    pcl_conversions
    pcl_ros
    geometry_msgs
+   visualization_msgs
 )
 find_package(PCL REQUIRED)
 MESSAGE(STATUS "This is SOURCE dir" ${PROJECT_SOURCE_DIR})
