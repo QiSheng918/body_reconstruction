@@ -31,7 +31,7 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 	pcl::concatenateFields(*cloud, *pcNormal, *cloud_with_normals);
 	// geometry_msgs::PoseArray msg;
 	sensor_msgs::PointCloud2 msg;
-	msg.header.frame_id="camera_depth_optical_frame";
+	msg.header.frame_id=input->header.frame_id;
 	msg.header.stamp=ros::Time::now();
 	pcl::toROSMsg(*cloud_with_normals, msg);
 	// msg.poses.resize(2);

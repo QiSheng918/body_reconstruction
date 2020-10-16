@@ -12,7 +12,7 @@
 
 
 
-
+std::string frame="camera_depth_optical_frame";
 ros::Publisher pcl_pub;
 
 void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
@@ -47,7 +47,7 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
      sensor_msgs::PointCloud2 output;
 	//  ros::Time::
 	 output.header.stamp=ros::Time::now();
-    output.header.frame_id = "camera_depth_optical_frame";
+    output.header.frame_id = input->header.frame_id;
     pcl::toROSMsg(*cloud_filtered, output);
     pcl_pub.publish(output);
     std::cout<<cloud_filtered->height<<std::endl;
@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
      ros::NodeHandle nh;
 
  
-     ros::Subscriber sub = nh.subscribe ("/camera/depth/color/points", 1, cloud_cb);
+     ros::Subscriber sub = nh.subscribe ("/camera/depth/points", 1, cloud_cb);
 	 pcl_pub= nh.advertise<sensor_msgs::PointCloud2> ("filter_output", 1);
      ros::spin();
 

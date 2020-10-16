@@ -38,14 +38,12 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 		normal_vec[m][4]+=1;
 	}
 	ROS_INFO("hello world!");
-	geometry_msgs::PoseArray msg;
-	msg.header.frame_id="camera_depth_optical_frame";
-	msg.header.stamp=ros::Time::now();
+	
 	double x_min=-0.4,x_max=0.4;
 	double delta_x=0.01;
 	double y=0;
 	visualization_msgs::Marker line_list;
-	line_list.header.frame_id = "camera_depth_optical_frame";
+	line_list.header.frame_id = input->header.frame_id;
     line_list.header.stamp = ros::Time::now();
     line_list.ns = "lines";
     line_list.action = visualization_msgs::Marker::ADD;
@@ -86,7 +84,7 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 			
 		}		
 	}
-    pcl_pub.publish(msg);
+    // pcl_pub.publish(msg);
 
 }
 

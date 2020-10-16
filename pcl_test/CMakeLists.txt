@@ -20,6 +20,7 @@ find_package(catkin REQUIRED
    visualization_msgs
 )
 find_package(PCL REQUIRED)
+find_package(Eigen3 REQUIRED)
 MESSAGE(STATUS "This is SOURCE dir" ${PROJECT_SOURCE_DIR})
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -127,6 +128,7 @@ include_directories(
     # include
     ${catkin_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIRS}
+    ${Eigen3_INCLUDE_DIRS}
     
 )
 
@@ -166,6 +168,13 @@ target_link_libraries(linear_normal_pub_node
 add_executable(hash_test_node ${PROJECT_SOURCE_DIR}/src/hash_test.cpp)
 target_link_libraries(hash_test_node
    ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+)
+
+add_executable(speedl_test_node ${PROJECT_SOURCE_DIR}/src/speedl.cpp)
+target_link_libraries(speedl_test_node
+   ${PCL_LIBRARIES} 
+   ${Eigen3_LIBRARIES} 
    ${catkin_LIBRARIES}
 )
 
