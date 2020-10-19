@@ -59,14 +59,10 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 
 int main(int argc, char* argv[])
 {
-	 ros::init(argc, argv, "filter");
+	ros::init(argc, argv, "filter");
      ros::NodeHandle nh;
-
- 
      ros::Subscriber sub = nh.subscribe ("/camera/depth/points", 1, cloud_cb);
-	 pcl_pub= nh.advertise<sensor_msgs::PointCloud2> ("filter_output", 1);
+	pcl_pub= nh.advertise<sensor_msgs::PointCloud2> ("filter_output", 1);
      ros::spin();
-
- 
 	return 0;
 }
