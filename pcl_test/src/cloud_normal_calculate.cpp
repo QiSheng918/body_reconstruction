@@ -13,7 +13,8 @@
 ros::Publisher pcl_pub;
 void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 {
-	ROS_INFO("hello world");
+	ROS_INFO("point cloud normal calculating");
+
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg (*input, *cloud);
 
@@ -29,45 +30,21 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
  
 	pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals(new pcl::PointCloud<pcl::PointXYZINormal>);
 	pcl::concatenateFields(*cloud, *pcNormal, *cloud_with_normals);
-	// geometry_msgs::PoseArray msg;
+
 	sensor_msgs::PointCloud2 msg;
 	msg.header.frame_id=input->header.frame_id;
 	msg.header.stamp=ros::Time::now();
 	pcl::toROSMsg(*cloud_with_normals, msg);
-	// msg.poses.resize(2);
-	// msg.poses[0].position.x=0;
-	// msg.poses[0].position.y=0;
-	// msg.poses[0].position.z=1;
-	// msg.poses[0].orientation.x=0;
-	// msg.poses[0].orientation.y=0;
-	// msg.poses[0].orientation.z=0;
-	// msg.poses[0].orientation.w=1;
-
-	// msg.poses[1].position.x=0;
-	// msg.poses[1].position.y=0;
-	// msg.poses[1].position.z=0.5;
-	// msg.poses[1].orientation.x=0;
-	// msg.poses[1].orientation.y=0;
-	// msg.poses[1].orientation.z=1;
-	// msg.poses[1].orientation.w=0;
-
-
     pcl_pub.publish(msg);
-	// pcl::io::savePCDFile("plane_cloud_out.pcd", *cloud_with_normals);
-	// ros::shutdown();
 }
 
 
 int main(int argc, char* argv[])
 {
-	 ros::init(argc, argv, "normal_pub");
-     ros::NodeHandle nh;
-
- 
-     ros::Subscriber sub = nh.subscribe ("filter_output", 1, cloud_cb);
-	 pcl_pub= nh.advertise<sensor_msgs::PointCloud2>("normal_output", 1);
-     ros::spin();
-
- 
+	ros::init(argc, argv, "cloud_normal_calculate");
+    ros::NodeHandle nh;
+    ros::Subscriber sub = nh.subscribe ("cloud_preprocessed", 1, cloud_cb);
+	pcl_pub= nh.advertise<sensor_msgs::PointCloud2>("cloud_normal", 1);
+    ros::spin();
 	return 0;
 }

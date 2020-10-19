@@ -178,6 +178,13 @@ target_link_libraries(speedl_test_node
    ${catkin_LIBRARIES}
 )
 
+add_executable(norm_base ${PROJECT_SOURCE_DIR}/src/norm_base.cpp)
+target_link_libraries(norm_base
+   ${PCL_LIBRARIES} 
+   ${Eigen3_LIBRARIES} 
+   ${catkin_LIBRARIES}
+)
+
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
