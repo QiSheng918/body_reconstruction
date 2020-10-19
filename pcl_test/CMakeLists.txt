@@ -138,36 +138,30 @@ include_directories(
 #   src/${PROJECT_NAME}/agv_description.cpp
 # )
 
-add_executable(pcl_test ${PROJECT_SOURCE_DIR}/src/main.cpp)
-target_link_libraries(pcl_test
-   ${PCL_LIBRARIES} 
-   ${catkin_LIBRARIES}
-)
 
+# add_executable(cloud_preprocess_node ${PROJECT_SOURCE_DIR}/src/cloud_preprocess.cpp)
+# target_link_libraries(cloud_preprocess_node
+#    ${PCL_LIBRARIES} 
+#    ${catkin_LIBRARIES}
+# )
 
-add_executable(cloud_preprocess_node ${PROJECT_SOURCE_DIR}/src/cloud_preprocess.cpp)
-target_link_libraries(cloud_preprocess_node
-   ${PCL_LIBRARIES} 
-   ${catkin_LIBRARIES}
-)
+# add_executable(cloud_normal_calculate_node ${PROJECT_SOURCE_DIR}/src/cloud_normal_calculate.cpp)
+# target_link_libraries(cloud_normal_calculate_node
+#    ${PCL_LIBRARIES} 
+#    ${catkin_LIBRARIES}
+# )
 
-add_executable(cloud_normal_calculate_node ${PROJECT_SOURCE_DIR}/src/cloud_normal_calculate.cpp)
-target_link_libraries(cloud_normal_calculate_node
-   ${PCL_LIBRARIES} 
-   ${catkin_LIBRARIES}
-)
+# add_executable(cloud_cmd_generator_node ${PROJECT_SOURCE_DIR}/src/cloud_cmd_generator.cpp)
+# target_link_libraries(cloud_cmd_generator_node
+#    ${PCL_LIBRARIES} 
+#    ${catkin_LIBRARIES}
+# )
 
-add_executable(cloud_cmd_generator_node ${PROJECT_SOURCE_DIR}/src/cloud_cmd_generator.cpp)
-target_link_libraries(cloud_cmd_generator_node
-   ${PCL_LIBRARIES} 
-   ${catkin_LIBRARIES}
-)
-
-add_executable(cloud_cmd_test_node ${PROJECT_SOURCE_DIR}/src/cloud_cmd_test.cpp)
-target_link_libraries(cloud_cmd_test_node
-   ${PCL_LIBRARIES} 
-   ${catkin_LIBRARIES}
-)
+# add_executable(cloud_cmd_test_node ${PROJECT_SOURCE_DIR}/src/cloud_cmd_test.cpp)
+# target_link_libraries(cloud_cmd_test_node
+#    ${PCL_LIBRARIES} 
+#    ${catkin_LIBRARIES}
+# )
 
 
 # add_executable(speedl_test_node ${PROJECT_SOURCE_DIR}/src/speedl.cpp)

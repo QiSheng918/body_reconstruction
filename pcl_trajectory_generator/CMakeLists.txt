@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(surface_reconstruction)
+project(pcl_trajectory_generator)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -10,13 +10,21 @@ project(surface_reconstruction)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
-  sensor_msgs
   std_msgs
+  sensor_msgs
+  cv_bridge
+  image_transport
+  pcl_conversions
+  pcl_ros
+  geometry_msgs
+  visualization_msgs
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package(Eigen3 REQUIRED)
+find_package(PCL REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -71,7 +79,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   sensor_msgs#   std_msgs
+#   geometry_msgs#   sensor_msgs#   std_msgs
 # )
 
 ################################################
@@ -105,8 +113,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES surface_reconstruction
-#  CATKIN_DEPENDS roscpp rospy sensor_msgs std_msgs
+#  LIBRARIES pcl_trajectory_generator
+  CATKIN_DEPENDS geometry_msgs roscpp rospy sensor_msgs std_msgs tf
 #  DEPENDS system_lib
 )
 
@@ -117,13 +125,16 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
-  ${catkin_INCLUDE_DIRS}
+    # include
+    ${catkin_INCLUDE_DIRS}
+    ${PCL_INCLUDE_DIRS}
+    ${Eigen3_INCLUDE_DIRS}
+    
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/surface_reconstruction.cpp
+#   src/${PROJECT_NAME}/pcl_trajectory_generator.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -134,7 +145,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/surface_reconstruction_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/pcl_trajectory_generator_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -151,57 +162,30 @@ include_directories(
 #   ${catkin_LIBRARIES}
 # )
 
-#############
-## Install ##
-#############
+add_executable(cloud_preprocess_node ${PROJECT_SOURCE_DIR}/src/cloud_preprocess.cpp)
+target_link_libraries(cloud_preprocess_node
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+)
 
-# all install targets should use catkin DESTINATION variables
-# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
+add_executable(cloud_normal_calculate_node ${PROJECT_SOURCE_DIR}/src/cloud_normal_calculate.cpp)
+target_link_libraries(cloud_normal_calculate_node
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+)
 
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+add_executable(cloud_cmd_generator_node ${PROJECT_SOURCE_DIR}/src/cloud_cmd_generator.cpp)
+target_link_libraries(cloud_cmd_generator_node
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+)
 
-## Mark executables for installation
-## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
-# install(TARGETS ${PROJECT_NAME}_node
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+add_executable(cloud_cmd_test_node src/cloud_cmd_test.cpp)
+target_link_libraries(cloud_cmd_test_node
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+   ${EIGEN_LIBRARIES}
+)
 
-## Mark libraries for installation
-## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_libraries.html
-# install(TARGETS ${PROJECT_NAME}
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
-# )
 
-## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
 
-## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
-
-#############
-## Testing ##
-#############
-
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_surface_reconstruction.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
-
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)
