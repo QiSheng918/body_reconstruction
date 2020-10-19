@@ -163,6 +163,12 @@ target_link_libraries(cloud_cmd_generator_node
    ${catkin_LIBRARIES}
 )
 
+add_executable(cloud_cmd_test_node ${PROJECT_SOURCE_DIR}/src/cloud_cmd_test.cpp)
+target_link_libraries(cloud_cmd_test_node
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+)
+
 
 # add_executable(speedl_test_node ${PROJECT_SOURCE_DIR}/src/speedl.cpp)
 # target_link_libraries(speedl_test_node

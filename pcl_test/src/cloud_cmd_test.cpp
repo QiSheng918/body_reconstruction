@@ -21,16 +21,31 @@ class SpeedCmdGenerator
 {
 public:
 	SpeedCmdGenerator(){
-		ur_pub = nh.advertise<std_msgs::String>("ur_driver/URScript",1000);
-		pcl_sub = nh.subscribe ("cloud_normal", 1, &SpeedCmdGenerator::pclCallback,this);
-		wrench_sub = nh.subscribe("compensate_wrench_base_filter", 1000, &SpeedCmdGenerator::wrenchCallback,this);
+		flag=true;
+	
 		for(int i=0;i<6;i++){
 			command_vel.push_back(0);
 			wrench_now.push_back(0);
 			pos_now.push_back(0);
 		}
-		
+		ur_pub = nh.advertise<std_msgs::String>("ur_driver/URScript",1000);
+		// std::vector<double> temp(6,0);
+		rotation_matrix=Eigen::Matrix3d::Identity();
+		Eigen::Matrix<double,6,1> temp;
+
+		temp<<-0.496711,0.0440465,0.453079,3.09683,0.123347,-3.09437;
+		std::vector<double> temp_vec(6,0);
+		for(int i=0;i<6;i++) temp_vec[i]=temp(i);
+		pos_desire.push_back(temp_vec);
+		temp<< -0.497517,-0.099337,0.453065,3.0962,0.120257,-3.09446;
+		for(int i=0;i<6;i++) temp_vec[i]=temp(i);
+		pos_desire.push_back(temp_vec);
+
+
+		// pcl_sub = nh.subscribe ("cloud_normal", 1, &SpeedCmdGenerator::pclCallback,this);
+		wrench_sub = nh.subscribe("compensate_wrench_base_filter", 1000, &SpeedCmdGenerator::wrenchCallback,this);
 		ros::Duration(5).sleep();
+		// while(flag) ;
 		this->posCmdGenerator();
 		// ros::Rate loop_rate(250);
 		// while(ros::ok()){
@@ -47,6 +62,7 @@ private:
 	ros::Subscriber pcl_sub,wrench_sub;
 	ros::Publisher ur_pub;
 	tf::TransformListener listener;
+	bool flag;
 
 	std::vector<double> pos_now;
 	Eigen::Matrix3d rotation_matrix;
@@ -109,6 +125,7 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr& inpu
 		}		
 	}
 	pcl_sub.shutdown();
+	flag=false;
 };
 
 
@@ -132,16 +149,18 @@ void  SpeedCmdGenerator::posCmdGenerator()
 			this->getTransform();
 			Eigen::Vector3d linear_speed,angular_speed;
 			for(int m=0;m<3;m++){
-				linear_speed(m)=0.001*(pos_desire[i][m]);
+				linear_speed(m)=0.01*(pos_desire[i][m]);
 			}
 			for(int m=3;m<6;m++){
-				angular_speed(m-3)=0.0001*(pos_desire[i][m]);
+				angular_speed(m-3)=0.01*(pos_desire[i][m]);
 			}
 			linear_speed=rotation_matrix.transpose()*linear_speed;
-			linear_speed(2)=0.005*(desire_fz-wrench_now[2]);
+			// linear_speed(2)=0.005*(desire_fz-wrench_now[2]);
 			linear_speed=rotation_matrix*linear_speed;
 			for(int m=0;m<3;m++) command_vel[m]=linear_speed(m);
 			for(int m=0;m<3;m++) command_vel[m+3]=angular_speed(m);
+			for(int m=0;m<6;m++) std::cout<<command_vel[m]<<",";
+			std::cout<<std::endl;
 			this->urMove();
 			loop_rate.sleep();
 			ros::spinOnce();
@@ -169,7 +188,8 @@ void SpeedCmdGenerator::getTransform(){
 	pos_now[0]=transform.getOrigin().getX();
 	pos_now[1]=transform.getOrigin().getY();
 	pos_now[2]=transform.getOrigin().getZ();
-	for(int i=0;i<3;i++) pos_now[i+3]=eulerAngle(i);
+	for(int i=0;i<3;i++) pos_now[i+3]=eulerAngle(2-i);
+	
 }
 
 
@@ -220,7 +240,7 @@ void SpeedCmdGenerator::urMove()
 
 int main(int argc, char* argv[])
 {
-	ros::init(argc, argv, "speed_cmd_generator_node");
+	ros::init(argc, argv, "speed_cmd_test_node");
 	ros::AsyncSpinner spinner(2);
     spinner.start();
 	SpeedCmdGenerator speed_cmd_generator;
