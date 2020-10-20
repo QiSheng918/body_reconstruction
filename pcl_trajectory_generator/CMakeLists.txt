@@ -187,5 +187,12 @@ target_link_libraries(cloud_cmd_test_node
    ${EIGEN_LIBRARIES}
 )
 
+add_executable(interpret_test_node src/interpret_test.cpp)
+target_link_libraries(interpret_test_node
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+   ${EIGEN_LIBRARIES}
+)
+
 
 
