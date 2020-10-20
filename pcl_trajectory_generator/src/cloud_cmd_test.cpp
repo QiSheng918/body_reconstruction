@@ -33,7 +33,7 @@ public:
 		rotation_matrix=Eigen::Matrix3d::Identity();
 		Eigen::Matrix<double,6,1> temp;
 
-		temp<<-0.496711,0.0440465,0.453079,3.09683,0.123347,-3.09437;
+		temp<<-0.475419,-0.107859,0.428971,2.85009,-0.356394,3.08232;
 		std::vector<double> temp_vec(6,0);
 		for(int i=0;i<6;i++) temp_vec[i]=temp(i);
 		pos_desire.push_back(temp_vec);
@@ -149,19 +149,21 @@ void  SpeedCmdGenerator::posCmdGenerator()
 			this->getTransform();
 			Eigen::Vector3d linear_speed,angular_speed;
 			for(int m=0;m<3;m++){
-				linear_speed(m)=0.01*(pos_desire[i][m]);
+				linear_speed(m)=0.1*(pos_desire[i][m]-pos_now[m]);
 			}
 			for(int m=3;m<6;m++){
-				angular_speed(m-3)=0.01*(pos_desire[i][m]);
+				angular_speed(m-3)=0.1*(pos_desire[i][m]-pos_now[m]);
 			}
 			linear_speed=rotation_matrix.transpose()*linear_speed;
 			// linear_speed(2)=0.005*(desire_fz-wrench_now[2]);
 			linear_speed=rotation_matrix*linear_speed;
 			for(int m=0;m<3;m++) command_vel[m]=linear_speed(m);
 			for(int m=0;m<3;m++) command_vel[m+3]=angular_speed(m);
+			for(int m=0;m<3;m++) std::cout<<pos_now[m+3]<<",";
+			std::cout<<std::endl;
 			for(int m=0;m<6;m++) std::cout<<command_vel[m]<<",";
 			std::cout<<std::endl;
-			this->urMove();
+			// this->urMove();
 			loop_rate.sleep();
 			ros::spinOnce();
 		}
@@ -189,6 +191,7 @@ void SpeedCmdGenerator::getTransform(){
 	pos_now[1]=transform.getOrigin().getY();
 	pos_now[2]=transform.getOrigin().getZ();
 	for(int i=0;i<3;i++) pos_now[i+3]=eulerAngle(2-i);
+	
 	
 }
 

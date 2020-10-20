@@ -28,10 +28,9 @@ public:
 		wrench_sub = nh.subscribe("compensate_wrench_base_filter", 1000, &SpeedCmdGenerator::wrenchCallback,this);
 		for(int i=0;i<6;i++){
 			command_vel.push_back(0);
-			wrench_now.push_back(0);
-			pos_now.push_back(0);
+			wrench_now.push_back(0);	
 		}
-		
+		for(int i=0;i<7;i++) pos_now.push_back(0);
 		ros::Duration(5).sleep();
 		this->posCmdGenerator();
 		// ros::Rate loop_rate(250);
@@ -99,14 +98,16 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr& inpu
 
 			Eigen::AngleAxisd angle_axis(theta,n);
 
-
-			Eigen::Vector3d euler_angle=angle_axis.toRotationMatrix().eulerAngles(2,1,0);
-		
-			std::vector<double> temp(6,0);
+		 	Eigen::Quaterniond q(angle_axis);
+			std::vector<double> temp(7,0);
 			temp[0]=x;
 			temp[1]=y;
 			temp[2]=normal_vec[m][0]/normal_vec[m][4];
-			for(int i=0;i<3;i++) temp[i+3]=euler_angle(i);
+            temp[3]=q.x();
+            temp[4]=q.y();
+            temp[5]=q.z();
+            temp[6]=q.w();
+
 			pos_desire.push_back(temp);
 		}		
 	}
@@ -128,17 +129,40 @@ void  SpeedCmdGenerator::posCmdGenerator()
 {
 	ros::Rate loop_rate(50);	
 	for(int i=0;i<pos_desire.size();i++){
-		int distance=(pos_desire[i][0]-pos_now[0])*(pos_desire[i][0]-pos_now[0])+(pos_desire[i][1]-pos_now[1])*(pos_desire[i][1]-pos_now[1]);
-		while(distance<0.1){
+		double distance=1;
+		// ROS_INFO_STREAM
+		
 			
+		// double  distance=(pos_desire[i][0]-pos_now[0])*(pos_desire[i][0]-pos_now[0])+(pos_desire[i][1]-pos_now[1])*(pos_desire[i][1]-pos_now[1]);
+		while(distance>1e-3){
+			distance=(pos_desire[i][0]-pos_now[0])*(pos_desire[i][0]-pos_now[0])+(pos_desire[i][1]-pos_now[1])*(pos_desire[i][1]-pos_now[1]);
+			std::cout<<distance<<std::endl;
 			this->getTransform();
 			Eigen::Vector3d linear_speed,angular_speed;
 			for(int m=0;m<3;m++){
-				linear_speed(m)=0.001*(pos_desire[i][m]);
+				linear_speed(m)=0.1*(pos_desire[i][m]-pos_now[m]);
 			}
-			for(int m=3;m<6;m++){
-				angular_speed(m-3)=0.0001*(pos_desire[i][m]);
+
+			double q_dot=0;
+            for(int m=3;m<7;m++) q_dot+=pos_now[m]*pos_desire[i][m];
+            if(q_dot<0){
+                for(int m=3;m<7;m++) pos_now[m]=-pos_now[m];
+            }
+            Eigen::Matrix<double,3,1> epsilon, epsilon_d;                 
+            epsilon << pos_now[3], pos_now[4], pos_now[5];          
+            epsilon_d << pos_desire[i][3], pos_desire[i][4],pos_desire[i][5];          
+            Eigen::Matrix<double,3,3> skew_matrix;
+            skew_matrix << 0,-epsilon_d(2),epsilon_d(1),epsilon_d(2),0,-epsilon_d(0),-epsilon_d(1),epsilon_d(0),0;    
+            Eigen::Matrix<double,3,1> orient_error = pos_desire[i][6] * epsilon - pos_now[6] * epsilon_d + skew_matrix * epsilon;                
+            // ur_error_matrix(3) = - orient_error(0);                
+            // ur_error_matrix(4) = - orient_error(1);                
+            // ur_error_matrix(5) = - orient_error(2);       
+    
+
+			for(int m=0;m<3;m++){
+				angular_speed(m)=  -orient_error(m); 
 			}
+
 			linear_speed=rotation_matrix.transpose()*linear_speed;
 			linear_speed(2)=0.005*(desire_fz-wrench_now[2]);
 			linear_speed=rotation_matrix*linear_speed;
@@ -168,10 +192,14 @@ void SpeedCmdGenerator::getTransform(){
 	Eigen::Quaterniond q(_w,_x,_y,_z);
 	Eigen::Vector3d eulerAngle=q.matrix().eulerAngles(2,1,0);
 	rotation_matrix=q.toRotationMatrix();
+    
 	pos_now[0]=transform.getOrigin().getX();
 	pos_now[1]=transform.getOrigin().getY();
 	pos_now[2]=transform.getOrigin().getZ();
-	for(int i=0;i<3;i++) pos_now[i+3]=eulerAngle(i);
+    pos_now[3]=transform.getRotation().getX();
+    pos_now[4]=transform.getRotation().getY();
+    pos_now[5]=transform.getRotation().getZ();
+    pos_now[6]=transform.getRotation().getW();
 }
 
 

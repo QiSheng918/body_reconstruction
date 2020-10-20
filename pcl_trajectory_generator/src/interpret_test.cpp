@@ -34,14 +34,14 @@ public:
 		ur_pub = nh.advertise<std_msgs::String>("ur_driver/URScript",1000);
 		// std::vector<double> temp(6,0);
 		rotation_matrix=Eigen::Matrix3d::Identity();
-		Eigen::Matrix<double,6,1> temp;
+		Eigen::Matrix<double,7,1> temp;
 
-		temp<<-0.496711,0.0440465,0.453079,3.09683,0.123347,-3.09437;
-		std::vector<double> temp_vec(6,0);
-		for(int i=0;i<6;i++) temp_vec[i]=temp(i);
+		temp<<-0.710179,-0.0584271,0.323402,0.00901053,0.999542,0.0122294,-0.026155;
+		std::vector<double> temp_vec(7,0);
+		for(int i=0;i<7;i++) temp_vec[i]=temp(i);
 		pos_desire.push_back(temp_vec);
-		temp<< -0.497517,-0.099337,0.453065,3.0962,0.120257,-3.09446;
-		for(int i=0;i<6;i++) temp_vec[i]=temp(i);
+		temp<<-0.368538,-0.107932,0.733117,-0.0209165,0.924397,0.0176401,-0.38045;
+		for(int i=0;i<7;i++) temp_vec[i]=temp(i);
 		pos_desire.push_back(temp_vec);
 
 
@@ -150,15 +150,18 @@ void  SpeedCmdGenerator::posCmdGenerator()
 {
 	ros::Rate loop_rate(50);	
 	for(int i=0;i<pos_desire.size();i++){
-		int distance=(pos_desire[i][0]-pos_now[0])*(pos_desire[i][0]-pos_now[0])+(pos_desire[i][1]-pos_now[1])*(pos_desire[i][1]-pos_now[1]);
-		while(distance<0.1){
-			
+		double distance=1;
+		// ROS_INFO_STREAM
+		while(distance>1e-3){
+			distance=(pos_desire[i][0]-pos_now[0])*(pos_desire[i][0]-pos_now[0])+(pos_desire[i][1]-pos_now[1])*(pos_desire[i][1]-pos_now[1]);
+			std::cout<<distance<<std::endl;
+
 			this->getTransform();
 
 
 			Eigen::Vector3d linear_speed,angular_speed;
 			for(int m=0;m<3;m++){
-				linear_speed(m)=0.01*(pos_desire[i][m]);
+				linear_speed(m)=0.1*(pos_desire[i][m]-pos_now[m]);
 			}
     
             double q_dot=0;
@@ -239,7 +242,7 @@ std::string SpeedCmdGenerator::double2string(double input)
 //限制速度大小
 void SpeedCmdGenerator::limitVelocity(std::vector<double> &velocity){
     for(int i=0;i<velocity.size();i++){
-        if(fabs(velocity[i])<1e-3) velocity[i]=0;
+        if(fabs(velocity[i])<1e-4) velocity[i]=0;
         if(velocity[i]>velocity_limit) velocity[i]=velocity_limit;
         else if(velocity[i]<-velocity_limit) velocity[i]=-velocity_limit;
         else ;
