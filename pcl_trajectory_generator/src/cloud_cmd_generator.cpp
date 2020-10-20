@@ -33,15 +33,8 @@ public:
 		for(int i=0;i<7;i++) pos_now.push_back(0);
 		ros::Duration(5).sleep();
 		this->posCmdGenerator();
-		// ros::Rate loop_rate(250);
-		// while(ros::ok()){
-			
-		// 	ros::spinOnce();
-		// 	loop_rate.sleep();
-		// }
 	}
 
-	
 
 private:
 	ros::NodeHandle nh;
@@ -66,10 +59,12 @@ private:
 };
 
 
+//利用点云数据获取人体表面法向量并提取出一条机器人末端执行的轨迹
 void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr& input){
 	pcl::PointCloud<pcl::PointNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointNormal>);
     pcl::fromROSMsg (*input, *cloud);
 
+	// 利用hash表存储点云位置以及对应位置的法向量
 	std::vector<std::vector<double> >  normal_vec(10000,std::vector<double>(5,0));
 	for(int i=0;i<cloud->points.size();i++){
 		int m=int(cloud->points[i].x*50+50)*100+int(cloud->points[i].y*50+50);
@@ -84,8 +79,8 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr& inpu
 	double delta_x=0.01;
 	double y=0;
 
+	//进行末端轨迹提取，提取结果为一系列路点的位姿
 	Eigen::Vector3d norm1{0,0,1};
-	
 	for(double x=x_min;x<x_max;x+=delta_x){
 		int m=int(x*50+50)*100+int(y*50+50);
 		if(normal_vec[m][4]!=0){
@@ -107,14 +102,13 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr& inpu
             temp[4]=q.y();
             temp[5]=q.z();
             temp[6]=q.w();
-
 			pos_desire.push_back(temp);
 		}		
 	}
 	pcl_sub.shutdown();
 };
 
-
+//力矩传感器回调函数
 void SpeedCmdGenerator::wrenchCallback(const geometry_msgs::WrenchStampedConstPtr& msg){
 	wrench_now[0] = msg->wrench.force.x;
     wrench_now[1] = msg->wrench.force.y;
@@ -130,19 +124,14 @@ void  SpeedCmdGenerator::posCmdGenerator()
 	ros::Rate loop_rate(50);	
 	for(int i=0;i<pos_desire.size();i++){
 		double distance=1;
-		// ROS_INFO_STREAM
 		
-			
-		// double  distance=(pos_desire[i][0]-pos_now[0])*(pos_desire[i][0]-pos_now[0])+(pos_desire[i][1]-pos_now[1])*(pos_desire[i][1]-pos_now[1]);
 		while(distance>1e-3){
 			distance=(pos_desire[i][0]-pos_now[0])*(pos_desire[i][0]-pos_now[0])+(pos_desire[i][1]-pos_now[1])*(pos_desire[i][1]-pos_now[1]);
 			std::cout<<distance<<std::endl;
 			this->getTransform();
 			Eigen::Vector3d linear_speed,angular_speed;
-			for(int m=0;m<3;m++){
-				linear_speed(m)=0.1*(pos_desire[i][m]-pos_now[m]);
-			}
-
+			for(int m=0;m<3;m++) linear_speed(m)=0.1*(pos_desire[i][m]-pos_now[m]);
+			
 			double q_dot=0;
             for(int m=3;m<7;m++) q_dot+=pos_now[m]*pos_desire[i][m];
             if(q_dot<0){
@@ -154,14 +143,7 @@ void  SpeedCmdGenerator::posCmdGenerator()
             Eigen::Matrix<double,3,3> skew_matrix;
             skew_matrix << 0,-epsilon_d(2),epsilon_d(1),epsilon_d(2),0,-epsilon_d(0),-epsilon_d(1),epsilon_d(0),0;    
             Eigen::Matrix<double,3,1> orient_error = pos_desire[i][6] * epsilon - pos_now[6] * epsilon_d + skew_matrix * epsilon;                
-            // ur_error_matrix(3) = - orient_error(0);                
-            // ur_error_matrix(4) = - orient_error(1);                
-            // ur_error_matrix(5) = - orient_error(2);       
-    
-
-			for(int m=0;m<3;m++){
-				angular_speed(m)=  -orient_error(m); 
-			}
+			for(int m=0;m<3;m++) angular_speed(m)=  -orient_error(m); 
 
 			linear_speed=rotation_matrix.transpose()*linear_speed;
 			linear_speed(2)=0.005*(desire_fz-wrench_now[2]);
@@ -176,6 +158,7 @@ void  SpeedCmdGenerator::posCmdGenerator()
    
 }
 
+//获取机器人当前状态信息
 void SpeedCmdGenerator::getTransform(){
 	tf::StampedTransform transform; 
 	try{
@@ -190,7 +173,6 @@ void SpeedCmdGenerator::getTransform(){
 	double _z=transform.getRotation().getZ();
 	double _w=transform.getRotation().getW();
 	Eigen::Quaterniond q(_w,_x,_y,_z);
-	Eigen::Vector3d eulerAngle=q.matrix().eulerAngles(2,1,0);
 	rotation_matrix=q.toRotationMatrix();
     
 	pos_now[0]=transform.getOrigin().getX();

@@ -28,19 +28,21 @@ void pclCallback(const sensor_msgs::PointCloud2ConstPtr& input)
     pcl::PointCloud<pcl::PointXYZ>::Ptr source_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg (*input, *source_cloud);
 
+   //进行点云坐标系转换
     pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::transformPointCloud (*source_cloud, *transformed_cloud, tool2base_transform_matrix);
 
  	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::PassThrough<pcl::PointXYZ> pass;
 
-    pass.setInputCloud (transformed_cloud);            //设置输入点云
-    pass.setFilterFieldName ("z");         //设置过滤时所需要点云类型的Z字段
-    pass.setFilterLimits (0.2, 1.5);        //设置在过滤字段的范围
+    //进行点云直通滤波
+    pass.setInputCloud (transformed_cloud);            
+    pass.setFilterFieldName ("z");         
+    pass.setFilterLimits (0.2, 1.5);       
     pass.filter (*cloud_filtered);  
 
     pass.setInputCloud (cloud_filtered);  
-    pass.setFilterFieldName ("x");         //设置过滤时所需要点云类型的Z字段
+    pass.setFilterFieldName ("x");         
     pass.setFilterLimits (-0.5, 0.5);   
     pass.filter (*cloud_filtered); 
      
