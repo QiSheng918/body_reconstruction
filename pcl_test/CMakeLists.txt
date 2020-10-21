@@ -139,25 +139,26 @@ include_directories(
 # )
 
 
-# add_executable(normal_display_node ${PROJECT_SOURCE_DIR}/src/normal_display.cpp)
-# target_link_libraries(normal_display_node
-#    ${PCL_LIBRARIES} 
-#    ${catkin_LIBRARIES}
-#    ${Eigen3_INCLUDE_DIRS}
+add_executable(filter_test_node ${PROJECT_SOURCE_DIR}/src/filter_test.cpp)
+target_link_libraries(filter_test_node
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+   ${Eigen3_INCLUDE_DIRS}
 
-# )
+)
 
-# add_executable(cloud_normal_calculate_node ${PROJECT_SOURCE_DIR}/src/cloud_normal_calculate.cpp)
-# target_link_libraries(cloud_normal_calculate_node
-#    ${PCL_LIBRARIES} 
-#    ${catkin_LIBRARIES}
-# )
+add_executable(normal_calculate_test_node ${PROJECT_SOURCE_DIR}/src/normal_calculate_test.cpp)
+target_link_libraries(normal_calculate_test_node
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+)
 
-# add_executable(cloud_cmd_generator_node ${PROJECT_SOURCE_DIR}/src/cloud_cmd_generator.cpp)
-# target_link_libraries(cloud_cmd_generator_node
-#    ${PCL_LIBRARIES} 
-#    ${catkin_LIBRARIES}
-# )
+add_executable(normal_display_test_node ${PROJECT_SOURCE_DIR}/src/normal_display_test.cpp)
+target_link_libraries(normal_display_test_node
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+   ${Eigen3_INCLUDE_DIRS}
+)
 
 # add_executable(cloud_cmd_test_node ${PROJECT_SOURCE_DIR}/src/cloud_cmd_test.cpp)
 # target_link_libraries(cloud_cmd_test_node

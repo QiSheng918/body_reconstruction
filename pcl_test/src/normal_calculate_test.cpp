@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 {
 	ros::init(argc, argv, "cloud_normal_calculate");
     ros::NodeHandle nh;
-    ros::Subscriber sub = nh.subscribe ("cloud_preprocessed", 1, cloud_cb);
+    ros::Subscriber sub = nh.subscribe ("filter_output", 1, cloud_cb);
 	pcl_pub= nh.advertise<sensor_msgs::PointCloud2>("cloud_normal", 1);
     ros::spin();
 	return 0;
