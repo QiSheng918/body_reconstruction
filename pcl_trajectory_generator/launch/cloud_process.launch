@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="pcl_trajectory_generator" type="cloud_normal_calculate_node" name="cloud_normal_calculate_node" output="screen"/>
+    <node pkg="pcl_trajectory_generator" type="cloud_preprocess_node" name="cloud_preprocess_node" output="screen"/>
+</launch>

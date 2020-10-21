@@ -36,9 +36,9 @@ public:
 		wrench_sub = nh.subscribe("compensate_wrench_base_filter", 1000, &SpeedCmdGenerator::wrenchCallback,this);
 		pose_pub=nh.advertise<geometry_msgs::PoseArray>("pose_array",1000);
 		ros::Duration(10).sleep();
-		// while(flag) ;
-		ros::spin();
-		// this->posCmdGenerator();
+		while(flag) ;
+		// ros::spin();
+		this->posCmdGenerator();
 	}
 
 
@@ -103,8 +103,10 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr& inpu
 			double theta=acos(norm1.dot(norm2));
 
 			Eigen::AngleAxisd angle_axis(theta,n);
-
-		 	Eigen::Quaterniond q(angle_axis);
+			Eigen::Matrix3d T=Eigen::Matrix3d::Identity();
+			T(1,1)=-1;
+			T(2,2)=-1;
+		 	Eigen::Quaterniond q(angle_axis.toRotationMatrix());
 			std::vector<double> temp(7,0);
 			temp[0]=x;
 			temp[1]=y;
@@ -133,8 +135,8 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr& inpu
 		for(int j=0;j<7;j++) std::cout<<pos_desire[i][j]<<",";
 		std::cout<<std::endl;
 	}
-	// flag=false;
-	// pcl_sub.shutdown();
+	flag=false;
+	pcl_sub.shutdown();
 };
 
 //力矩传感器回调函数
@@ -150,16 +152,47 @@ void SpeedCmdGenerator::wrenchCallback(const geometry_msgs::WrenchStampedConstPt
 
 void  SpeedCmdGenerator::posCmdGenerator()
 {
-	ros::Rate loop_rate(50);	
+	ros::Rate loop_rate(50);
+	double distance=1;	
+	while(distance>1e-4){
+		distance=(pos_desire[0][0]-pos_now[0])*(pos_desire[0][0]-pos_now[0])+(pos_desire[0][1]-pos_now[1])*(pos_desire[0][1]-pos_now[1])+(pos_desire[0][2]-pos_now[2])*(pos_desire[0][2]-pos_now[2]);
+
+			std::cout<<distance<<std::endl;
+			this->getTransform();
+			Eigen::Vector3d linear_speed,angular_speed;
+			for(int m=0;m<3;m++) linear_speed(m)=1*(pos_desire[0][m]-pos_now[m]);
+			
+			double q_dot=0;
+            for(int m=3;m<7;m++) q_dot+=pos_now[m]*pos_desire[0][m];
+            if(q_dot<0){
+                for(int m=3;m<7;m++) pos_now[m]=-pos_now[m];
+            }
+            Eigen::Matrix<double,3,1> epsilon, epsilon_d;                 
+            epsilon << pos_now[3], pos_now[4], pos_now[5];          
+            epsilon_d << pos_desire[0][3], pos_desire[0][4],pos_desire[0][5];          
+            Eigen::Matrix<double,3,3> skew_matrix;
+            skew_matrix << 0,-epsilon_d(2),epsilon_d(1),epsilon_d(2),0,-epsilon_d(0),-epsilon_d(1),epsilon_d(0),0;    
+            Eigen::Matrix<double,3,1> orient_error = pos_desire[0][6] * epsilon - pos_now[6] * epsilon_d + skew_matrix * epsilon;                
+			for(int m=0;m<3;m++) angular_speed(m)=  -0.5*orient_error(m); 
+
+			linear_speed=rotation_matrix.transpose()*linear_speed;
+			// linear_speed(2)=0.005*(desire_fz-wrench_now[2]);
+			linear_speed=rotation_matrix*linear_speed;
+			for(int m=0;m<3;m++) command_vel[m]=linear_speed(m);
+			for(int m=0;m<3;m++) command_vel[m+3]=angular_speed(m);
+			this->urMove();
+			loop_rate.sleep();
+			ros::spinOnce();
+	}
 	for(int i=0;i<pos_desire.size();i++){
-		double distance=1;
 		
-		while(distance>1e-3){
+		distance=1;
+		while(distance>1e-4){
 			distance=(pos_desire[i][0]-pos_now[0])*(pos_desire[i][0]-pos_now[0])+(pos_desire[i][1]-pos_now[1])*(pos_desire[i][1]-pos_now[1]);
 			std::cout<<distance<<std::endl;
 			this->getTransform();
 			Eigen::Vector3d linear_speed,angular_speed;
-			for(int m=0;m<3;m++) linear_speed(m)=0.1*(pos_desire[i][m]-pos_now[m]);
+			for(int m=0;m<3;m++) linear_speed(m)=1*(pos_desire[i][m]-pos_now[m]);
 			
 			double q_dot=0;
             for(int m=3;m<7;m++) q_dot+=pos_now[m]*pos_desire[i][m];
@@ -230,7 +263,7 @@ std::string SpeedCmdGenerator::double2string(double input)
 //限制速度大小
 void SpeedCmdGenerator::limitVelocity(std::vector<double> &velocity){
     for(int i=0;i<velocity.size();i++){
-        if(fabs(velocity[i])<1e-3) velocity[i]=0;
+        if(fabs(velocity[i])<1e-4) velocity[i]=0;
         if(velocity[i]>velocity_limit) velocity[i]=velocity_limit;
         else if(velocity[i]<-velocity_limit) velocity[i]=-velocity_limit;
         else ;
