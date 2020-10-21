@@ -24,6 +24,7 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
 	pcl::PointCloud<pcl::Normal>::Ptr pcNormal(new pcl::PointCloud<pcl::Normal>);
 	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+	ne.setViewPoint(0,0,2);
 	tree->setInputCloud(cloud);
 	ne.setInputCloud(cloud);
 	ne.setSearchMethod(tree);
@@ -36,9 +37,10 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 	pcl::concatenateFields(*cloud, *pcNormal, *cloud_with_normals);
 
 	sensor_msgs::PointCloud2 msg;
+	
+	pcl::toROSMsg(*cloud_with_normals, msg);
 	msg.header.frame_id=input->header.frame_id;
 	msg.header.stamp=ros::Time::now();
-	pcl::toROSMsg(*cloud_with_normals, msg);
     pcl_pub.publish(msg);
 }
 

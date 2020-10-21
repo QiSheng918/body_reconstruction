@@ -70,5 +70,12 @@ target_link_libraries(interpret_test_node
    ${EIGEN_LIBRARIES}
 )
 
+add_executable(cloud_normal_display_node src/cloud_normal_display.cpp)
+target_link_libraries(cloud_normal_display_node
+   ${PCL_LIBRARIES} 
+   ${catkin_LIBRARIES}
+   ${EIGEN_LIBRARIES}
+)
+
 
 

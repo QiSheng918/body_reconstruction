@@ -17,9 +17,9 @@
 
 
 
-std::string frame="camera_depth_optical_frame";
+std::string frame="camera_color_optical_frame";
 ros::Publisher pcl_pub;
-tf::TransformListener listener;
+
 std::string frmae_id="base";
 Eigen::Matrix4d tool2base_transform_matrix;
 
@@ -38,12 +38,12 @@ void pclCallback(const sensor_msgs::PointCloud2ConstPtr& input)
     //进行点云直通滤波
     pass.setInputCloud (transformed_cloud);            
     pass.setFilterFieldName ("z");         
-    pass.setFilterLimits (0.2, 1.5);       
+    pass.setFilterLimits (-1, 1);       
     pass.filter (*cloud_filtered);  
 
     pass.setInputCloud (cloud_filtered);  
     pass.setFilterFieldName ("x");         
-    pass.setFilterLimits (-0.5, 0.5);   
+    pass.setFilterLimits (-1.5, 0);   
     pass.filter (*cloud_filtered); 
      
     pass.setInputCloud (cloud_filtered);  
@@ -52,24 +52,28 @@ void pclCallback(const sensor_msgs::PointCloud2ConstPtr& input)
     pass.filter (*cloud_filtered); 
 
     sensor_msgs::PointCloud2 output;
-	output.header.stamp=ros::Time::now();
-    output.header.frame_id = frmae_id;
+	
     pcl::toROSMsg(*cloud_filtered, output);
+    // pcl::toROSMsg(*transformed_cloud, output);
+    output.header.stamp=ros::Time::now();
+    output.header.frame_id = frmae_id;
     pcl_pub.publish(output);
 }
 
 
 int main(int argc, char* argv[])
 {
-	ros::init(argc, argv, "filter");
+	ros::init(argc, argv, "pcl_preprocess_node");
     ros::NodeHandle nh;
-    ros::Subscriber sub = nh.subscribe ("/camera/depth/points", 1, pclCallback);
+    tf::TransformListener listener;
 	pcl_pub= nh.advertise<sensor_msgs::PointCloud2> ("cloud_preprocessed", 1);
+    ros::Subscriber sub = nh.subscribe ("/camera/depth_registered/points", 1, pclCallback);
     ros::Rate loop_rate(250);
+    ROS_INFO("LOOPING");
     while(ros::ok()){
         tf::StampedTransform transform; 
         try{
-      	listener.lookupTransform("base", "tool0",  
+      	listener.lookupTransform("base", frame,
                                ros::Time(0), transform);
         }
         catch (tf::TransformException ex){
@@ -81,8 +85,12 @@ int main(int argc, char* argv[])
         double _y=transform.getRotation().getY();
         double _z=transform.getRotation().getZ();
         double _w=transform.getRotation().getW();
+        std::cout<<transform.getOrigin().getX()<<","<<transform.getOrigin().getY()<<","<<transform.getOrigin().getZ()<<std::endl;
         Eigen::Quaterniond q(_w,_x,_y,_z);
+        std::cout<<q.w()<<","<<_w<<std::endl;
         tool2base_transform_matrix.block(0,0,3,3)=q.toRotationMatrix();
+        Eigen::Vector3d p(transform.getOrigin().getX(),transform.getOrigin().getY(),transform.getOrigin().getZ());
+        p=-q.toRotationMatrix().transpose()*p;
         tool2base_transform_matrix(0,3)=transform.getOrigin().getX();
         tool2base_transform_matrix(1,3)=transform.getOrigin().getY();
         tool2base_transform_matrix(2,3)=transform.getOrigin().getZ();

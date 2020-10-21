@@ -139,10 +139,12 @@ include_directories(
 # )
 
 
-# add_executable(cloud_preprocess_node ${PROJECT_SOURCE_DIR}/src/cloud_preprocess.cpp)
-# target_link_libraries(cloud_preprocess_node
+# add_executable(normal_display_node ${PROJECT_SOURCE_DIR}/src/normal_display.cpp)
+# target_link_libraries(normal_display_node
 #    ${PCL_LIBRARIES} 
 #    ${catkin_LIBRARIES}
+#    ${Eigen3_INCLUDE_DIRS}
+
 # )
 
 # add_executable(cloud_normal_calculate_node ${PROJECT_SOURCE_DIR}/src/cloud_normal_calculate.cpp)
