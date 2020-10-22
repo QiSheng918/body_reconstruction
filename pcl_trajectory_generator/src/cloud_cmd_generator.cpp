@@ -18,7 +18,7 @@
 
 
 const double velocity_limit=0.5;
-const double desire_fz=8;
+const double desire_fz=-8;
 
 class SpeedCmdGenerator
 {
@@ -33,7 +33,7 @@ public:
 
 		ur_pub = nh.advertise<std_msgs::String>("ur_driver/URScript",1000);
 		pcl_sub = nh.subscribe ("cloud_normal", 1, &SpeedCmdGenerator::pclCallback,this);
-		wrench_sub = nh.subscribe("compensate_wrench_base_filter", 1000, &SpeedCmdGenerator::wrenchCallback,this);
+		wrench_sub = nh.subscribe("compensate_wrench_tool", 1000, &SpeedCmdGenerator::wrenchCallback,this);
 		pose_pub=nh.advertise<geometry_msgs::PoseArray>("pose_array",1000);
 		ros::Duration(10).sleep();
 		while(flag) ;
@@ -110,7 +110,7 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr& inpu
 			std::vector<double> temp(7,0);
 			temp[0]=x;
 			temp[1]=y;
-			temp[2]=normal_vec[m][0]/normal_vec[m][4]+0.05;
+			temp[2]=normal_vec[m][0]/normal_vec[m][4]+0.02;
             temp[3]=q.x();
             temp[4]=q.y();
             temp[5]=q.z();
@@ -176,7 +176,8 @@ void  SpeedCmdGenerator::posCmdGenerator()
 			for(int m=0;m<3;m++) angular_speed(m)=  -0.5*orient_error(m); 
 
 			linear_speed=rotation_matrix.transpose()*linear_speed;
-			// linear_speed(2)=0.005*(desire_fz-wrench_now[2]);
+			
+			// linear_speed(2)=-0.005*(desire_fz-wrench_now[2]);
 			linear_speed=rotation_matrix*linear_speed;
 			for(int m=0;m<3;m++) command_vel[m]=linear_speed(m);
 			for(int m=0;m<3;m++) command_vel[m+3]=angular_speed(m);
@@ -192,7 +193,7 @@ void  SpeedCmdGenerator::posCmdGenerator()
 			std::cout<<distance<<std::endl;
 			this->getTransform();
 			Eigen::Vector3d linear_speed,angular_speed;
-			for(int m=0;m<3;m++) linear_speed(m)=1*(pos_desire[i][m]-pos_now[m]);
+			for(int m=0;m<3;m++) linear_speed(m)=0.5*(pos_desire[i][m]-pos_now[m]);
 			
 			double q_dot=0;
             for(int m=3;m<7;m++) q_dot+=pos_now[m]*pos_desire[i][m];
@@ -205,10 +206,10 @@ void  SpeedCmdGenerator::posCmdGenerator()
             Eigen::Matrix<double,3,3> skew_matrix;
             skew_matrix << 0,-epsilon_d(2),epsilon_d(1),epsilon_d(2),0,-epsilon_d(0),-epsilon_d(1),epsilon_d(0),0;    
             Eigen::Matrix<double,3,1> orient_error = pos_desire[i][6] * epsilon - pos_now[6] * epsilon_d + skew_matrix * epsilon;                
-			for(int m=0;m<3;m++) angular_speed(m)=  -1*orient_error(m); 
-
+			for(int m=0;m<3;m++) angular_speed(m)=  -0.5*orient_error(m); 
+			std::cout<<wrench_now[2]<<std::endl;
 			linear_speed=rotation_matrix.transpose()*linear_speed;
-			// linear_speed(2)=0.005*(desire_fz-wrench_now[2]);
+			linear_speed(2)=-0.002*(desire_fz-wrench_now[2]);
 			linear_speed=rotation_matrix*linear_speed;
 			for(int m=0;m<3;m++) command_vel[m]=linear_speed(m);
 			for(int m=0;m<3;m++) command_vel[m+3]=angular_speed(m);
