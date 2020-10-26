@@ -16,6 +16,9 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   visualization_msgs
   tf
+  moveit_core
+  moveit_ros_planning
+  moveit_ros_planning_interface
 )
 
 # find_package(Boost REQUIRED COMPONENTS system)

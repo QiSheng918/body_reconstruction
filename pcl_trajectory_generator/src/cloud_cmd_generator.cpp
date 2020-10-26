@@ -15,21 +15,34 @@
 #include <string>
 #include <geometry_msgs/WrenchStamped.h>
 #include <geometry_msgs/PoseArray.h>
+#include <moveit/move_group_interface/move_group_interface.h>
 
 
 const double velocity_limit=0.5;
-const double desire_fz=-8;
+const double desire_fz=-5;
+static const std::string PLANNING_GROUP = "manipulator";
+
 
 class SpeedCmdGenerator
 {
 public:
-	SpeedCmdGenerator(){
+	SpeedCmdGenerator():move_group(PLANNING_GROUP)
+	{
 		flag=true;
 		for(int i=0;i<6;i++){
 			command_vel.push_back(0);
 			wrench_now.push_back(0);	
 		}
 		for(int i=0;i<7;i++) pos_now.push_back(0);
+
+		std::string pos="vision_pose";
+        move_group.setNamedTarget(pos);
+        bool plan_success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+        if(!plan_success) return;
+        std::cout<<"plan success"<<std::endl;
+        bool execute_success = (move_group.execute(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+        if(!execute_success) return;
+        std::cout<<"execute success"<<std::endl;
 
 		ur_pub = nh.advertise<std_msgs::String>("ur_driver/URScript",1000);
 		pcl_sub = nh.subscribe ("cloud_normal", 1, &SpeedCmdGenerator::pclCallback,this);
@@ -39,6 +52,15 @@ public:
 		while(flag) ;
 		// ros::spin();
 		this->posCmdGenerator();
+
+		ros::Duration(5).sleep();
+        move_group.setNamedTarget(pos);
+        plan_success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+        if(!plan_success) return;
+        std::cout<<"plan success"<<std::endl;
+        execute_success = (move_group.execute(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+        if(!execute_success) return;
+        std::cout<<"execute success"<<std::endl;
 	}
 
 
@@ -55,6 +77,10 @@ private:
 
 	std::vector<double> command_vel;
 	bool flag;
+
+	moveit::planning_interface::MoveGroupInterface move_group;
+    moveit::planning_interface::MoveGroupInterface::Plan my_plan;
+
 
 	void pclCallback(const sensor_msgs::PointCloud2ConstPtr& input);
 	void wrenchCallback(const geometry_msgs::WrenchStampedConstPtr &msg);
@@ -82,20 +108,20 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr& inpu
 		normal_vec[m][4]+=1;
 	}
 
-	double x_min=-0.55,x_max=-0.4;
+	double x_min=-0.55,x_max=-0.3;
 	double delta_x=0.01;
 	double y=0;
 	geometry_msgs::PoseArray msg;
 	msg.header.frame_id="base";
 	msg.header.stamp=ros::Time::now();
 	//进行末端轨迹提取，提取结果为一系列路点的位姿
-	Eigen::Vector3d norm1{0,0,-1};
+	Eigen::Vector3d norm1{1,0,0};
 	for(double x=x_min;x<x_max;x+=delta_x){
 		int m=int(x*100+150)*100+int(y*100+50);
 		if(normal_vec[m][4]!=0){
 			Eigen::Vector3d norm2;
 			// std::cout<<normal_vec[m][1]<<','<<normal_vec[m][2]<<","<<normal_vec[m][3]<<std::endl;
-			norm2<<normal_vec[m][1],normal_vec[m][2],normal_vec[m][3];
+			norm2<<-normal_vec[m][1],-normal_vec[m][2],-normal_vec[m][3];
 			norm2.normalize();
 			std::cout<<norm2<<std::endl;
 			Eigen::Vector3d n=norm1.cross(norm2);
@@ -103,10 +129,11 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr& inpu
 			double theta=acos(norm1.dot(norm2));
 
 			Eigen::AngleAxisd angle_axis(theta,n);
+			Eigen::AngleAxisd angle_axis1(M_PI/2,Eigen::Vector3d(0,1,0));
 			Eigen::Matrix3d T=Eigen::Matrix3d::Identity();
 			T(1,1)=-1;
 			T(2,2)=-1;
-		 	Eigen::Quaterniond q(angle_axis.toRotationMatrix());
+		 	Eigen::Quaterniond q(angle_axis.toRotationMatrix()*angle_axis1.toRotationMatrix());
 			std::vector<double> temp(7,0);
 			temp[0]=x;
 			temp[1]=y;
@@ -160,7 +187,7 @@ void  SpeedCmdGenerator::posCmdGenerator()
 			std::cout<<distance<<std::endl;
 			this->getTransform();
 			Eigen::Vector3d linear_speed,angular_speed;
-			for(int m=0;m<3;m++) linear_speed(m)=1*(pos_desire[0][m]-pos_now[m]);
+			for(int m=0;m<3;m++) linear_speed(m)=2*(pos_desire[0][m]-pos_now[m]);
 			
 			double q_dot=0;
             for(int m=3;m<7;m++) q_dot+=pos_now[m]*pos_desire[0][m];
@@ -173,7 +200,7 @@ void  SpeedCmdGenerator::posCmdGenerator()
             Eigen::Matrix<double,3,3> skew_matrix;
             skew_matrix << 0,-epsilon_d(2),epsilon_d(1),epsilon_d(2),0,-epsilon_d(0),-epsilon_d(1),epsilon_d(0),0;    
             Eigen::Matrix<double,3,1> orient_error = pos_desire[0][6] * epsilon - pos_now[6] * epsilon_d + skew_matrix * epsilon;                
-			for(int m=0;m<3;m++) angular_speed(m)=  -0.5*orient_error(m); 
+			for(int m=0;m<3;m++) angular_speed(m)=  -1*orient_error(m); 
 
 			linear_speed=rotation_matrix.transpose()*linear_speed;
 			
@@ -193,7 +220,7 @@ void  SpeedCmdGenerator::posCmdGenerator()
 			std::cout<<distance<<std::endl;
 			this->getTransform();
 			Eigen::Vector3d linear_speed,angular_speed;
-			for(int m=0;m<3;m++) linear_speed(m)=0.5*(pos_desire[i][m]-pos_now[m]);
+			for(int m=0;m<3;m++) linear_speed(m)=1*(pos_desire[i][m]-pos_now[m]);
 			
 			double q_dot=0;
             for(int m=3;m<7;m++) q_dot+=pos_now[m]*pos_desire[i][m];
@@ -206,7 +233,7 @@ void  SpeedCmdGenerator::posCmdGenerator()
             Eigen::Matrix<double,3,3> skew_matrix;
             skew_matrix << 0,-epsilon_d(2),epsilon_d(1),epsilon_d(2),0,-epsilon_d(0),-epsilon_d(1),epsilon_d(0),0;    
             Eigen::Matrix<double,3,1> orient_error = pos_desire[i][6] * epsilon - pos_now[6] * epsilon_d + skew_matrix * epsilon;                
-			for(int m=0;m<3;m++) angular_speed(m)=  -0.5*orient_error(m); 
+			for(int m=0;m<3;m++) angular_speed(m)=  -1*orient_error(m); 
 			std::cout<<wrench_now[2]<<std::endl;
 			linear_speed=rotation_matrix.transpose()*linear_speed;
 			linear_speed(2)=-0.002*(desire_fz-wrench_now[2]);

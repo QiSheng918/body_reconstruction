@@ -30,7 +30,9 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 	}
 	ROS_INFO("hello world!");
 	
-	double x_min=-0.55,x_max=-0.4;
+	double x_min=-1,x_max=-0;
+	// double x_min=-0.55,x_max=-0.4;
+
 	double delta_x=0.01;
 	double y=0;
 	visualization_msgs::Marker line_list;
@@ -49,7 +51,7 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 	geometry_msgs::PoseArray msg;
 	msg.header.frame_id="base";
 	msg.header.stamp=ros::Time::now();
-	Eigen::Vector3d norm1{0,0,-1};
+	Eigen::Vector3d norm1{1,0,0};
 
 	for(double x=x_min;x<x_max;x+=delta_x){
 		int m=int(x*100+150)*100+int(y*100+50);
@@ -71,22 +73,23 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
     		marker_pub.publish(line_list);	
 
 			Eigen::Vector3d norm2;
-			norm2<<normal_vec[m][1],normal_vec[m][2],normal_vec[m][3];
+			norm2<<-normal_vec[m][1],-normal_vec[m][2],-normal_vec[m][3];
 			norm2.normalize();
-			std::cout<<norm2<<std::endl;
+			std::cout<<norm2[2]<<std::endl;
 			Eigen::Vector3d n=norm1.cross(norm2);
 			// n.normalize();
-			double theta=acos(norm1.dot(norm2));
+			double theta=atan2(n.norm(),norm1.dot(norm2));
 
 			Eigen::AngleAxisd angle_axis(theta,n);
+			Eigen::AngleAxisd angle_axis1(M_PI/2,Eigen::Vector3d(0,1,0));
 			Eigen::Matrix3d T=Eigen::Matrix3d::Identity();
-			T(1,1)=-1;
-			T(2,2)=-1;
-		 	Eigen::Quaterniond q(angle_axis.toRotationMatrix());
+			T(0,2)=-1;
+			T(2,0)=1;
+		 	Eigen::Quaterniond q(angle_axis.toRotationMatrix()*angle_axis1.toRotationMatrix());
 			std::vector<double> temp(7,0);
 			temp[0]=x;
 			temp[1]=y;
-			temp[2]=normal_vec[m][0]/normal_vec[m][4]+0.05;
+			temp[2]=normal_vec[m][0]/normal_vec[m][4];
             temp[3]=q.x();
             temp[4]=q.y();
             temp[5]=q.z();
