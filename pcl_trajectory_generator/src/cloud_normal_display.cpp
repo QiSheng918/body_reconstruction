@@ -1,18 +1,21 @@
-#include <ros/ros.h>
 #include <iostream>
-#include <pcl/point_types.h>
-#include <pcl/io/pcd_io.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/point_cloud.h>
 #include <vector>
+
+#include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/PoseArray.h>
+#include <sensor_msgs/PointCloud2.h>
+
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_cloud.h>
+
 
 using namespace std;
 ros::Publisher pose_pub;
 ros::Publisher marker_pub;
+
 void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 {
 	
@@ -28,8 +31,8 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 		normal_vec[m][3]+=cloud->points[i].normal_z;
 		normal_vec[m][4]+=1;
 	}
-	ROS_INFO("hello world!");
-	
+	ROS_INFO("display calculating!");
+
 	double x_min=-1,x_max=-0;
 	// double x_min=-0.55,x_max=-0.4;
 
@@ -82,9 +85,9 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 
 			Eigen::AngleAxisd angle_axis(theta,n);
 			Eigen::AngleAxisd angle_axis1(M_PI/2,Eigen::Vector3d(0,1,0));
-			Eigen::Matrix3d T=Eigen::Matrix3d::Identity();
-			T(0,2)=-1;
-			T(2,0)=1;
+			// Eigen::Matrix3d T=Eigen::Matrix3d::Identity();
+			// T(0,2)=-1;
+			// T(2,0)=1;
 		 	Eigen::Quaterniond q(angle_axis.toRotationMatrix()*angle_axis1.toRotationMatrix());
 			std::vector<double> temp(7,0);
 			temp[0]=x;
@@ -94,6 +97,7 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
             temp[4]=q.y();
             temp[5]=q.z();
             temp[6]=q.w();
+
 			geometry_msgs::Pose pose_temp;
 			pose_temp.position.x=temp[0];
 			pose_temp.position.y=temp[1];

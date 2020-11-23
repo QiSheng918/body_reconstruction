@@ -24,6 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
 # find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
+find_package(orocos_kdl REQUIRED)
 
 
 catkin_package(
@@ -43,7 +44,9 @@ include_directories(
     # include
     ${catkin_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIRS}
-    ${Eigen3_INCLUDE_DIRS}  
+    ${Eigen3_INCLUDE_DIRS} 
+    ${orocos_kdl_INCLUDE_DIRS} 
+     
 )
 
 
