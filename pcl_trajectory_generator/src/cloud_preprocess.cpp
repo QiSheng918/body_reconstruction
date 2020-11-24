@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
         double _y=transform.getRotation().getY();
         double _z=transform.getRotation().getZ();
         double _w=transform.getRotation().getW();
-        std::cout<<transform.getOrigin().getX()<<","<<transform.getOrigin().getY()<<","<<transform.getOrigin().getZ()<<std::endl;
+        // std::cout<<transform.getOrigin().getX()<<","<<transform.getOrigin().getY()<<","<<transform.getOrigin().getZ()<<std::endl;
         Eigen::Quaterniond q(_w,_x,_y,_z);
 
         tool2base_transform_matrix.block(0,0,3,3)=q.toRotationMatrix();
