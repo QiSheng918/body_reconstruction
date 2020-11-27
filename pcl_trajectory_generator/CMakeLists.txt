@@ -25,7 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 find_package(orocos_kdl REQUIRED)
-
+find_package(Boost REQUIRED)
 
 catkin_package(
 #  INCLUDE_DIRS include
@@ -46,6 +46,9 @@ include_directories(
     ${PCL_INCLUDE_DIRS}
     ${Eigen3_INCLUDE_DIRS} 
     ${orocos_kdl_INCLUDE_DIRS} 
+    ${Boost_INCLUDE_DIRS} 
+
+    
      
 )
 
@@ -66,6 +69,7 @@ add_executable(cloud_cmd_generator_node ${PROJECT_SOURCE_DIR}/src/cloud_cmd_gene
 target_link_libraries(cloud_cmd_generator_node
    ${PCL_LIBRARIES} 
    ${catkin_LIBRARIES}
+   ${boost_LIBRARIES}
 )
 
 

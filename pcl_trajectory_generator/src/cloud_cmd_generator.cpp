@@ -4,6 +4,9 @@
 #include <vector>
 #include <string>
 
+#include <thread>
+#include <mutex>
+
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
@@ -35,7 +38,7 @@
 
 const double velocity_limit = 0.5;
 const double desire_fz = -5;
-static const std::string PLANNING_GROUP = "manipulator";
+const std::string PLANNING_GROUP = "manipulator";
 
 class SpeedCmdGenerator
 {
@@ -43,12 +46,9 @@ public:
 	SpeedCmdGenerator() : move_group(PLANNING_GROUP)
 	{
 		flag = true;
-		for (int i = 0; i < 6; i++)
-		{
-			command_vel.push_back(0);
-			wrench_now.push_back(0);
-		}
-		for (int i = 0; i < 7; i++) pos_now.push_back(0);
+
+		command_vel.resize(6,0);
+		pos_now.resize(7,0);
 
 		path = new KDL::Path_RoundedComposite(0.05, 0.01, new KDL::RotationalInterpolation_SingleAxis());
 
@@ -63,12 +63,16 @@ public:
 
 		ur_pub = nh.advertise<std_msgs::String>("ur_driver/URScript", 1000);
 		pcl_sub = nh.subscribe("cloud_normal", 1, &SpeedCmdGenerator::pclCallback, this);
-		wrench_sub = nh.subscribe("compensate_wrench_tool", 1000, &SpeedCmdGenerator::wrenchCallback, this);
+		wrench_sub = nh.subscribe("compensate_wrench_tool", 1, &SpeedCmdGenerator::wrenchCallback, this);
 		pose_pub = nh.advertise<geometry_msgs::PoseArray>("pose_array", 1000);
 
-		ros::Duration(10).sleep();
-		while (flag) ;
-
+		ros::Duration(5).sleep();
+		ros::Rate loop_rate(25);
+		while (flag){
+			ros::spinOnce();
+			loop_rate.sleep();
+		};
+		ros::Duration(2).sleep();
 
 		this->posCmdGenerator();
 
@@ -95,6 +99,7 @@ private:
 	std::vector<double> wrench_now;
 	std::vector<double> command_vel;
 	bool flag;
+ 	std::mutex m_mutex;
 
 	moveit::planning_interface::MoveGroupInterface move_group;
 	moveit::planning_interface::MoveGroupInterface::Plan my_plan;
@@ -259,6 +264,7 @@ void SpeedCmdGenerator::posCmdGenerator()
 	ros::Time init_time=ros::Time::now();
 	double t=0;
 	while(t<traject->Duration()){
+		// m_mutex.lock();
 		this->getTransform();
 		
 		t = (ros::Time::now() - init_time).toSec();
@@ -294,6 +300,7 @@ void SpeedCmdGenerator::posCmdGenerator()
 			command_vel[i + 3] = angular_speed(i);
 		}
 		this->urMove();
+		// m_mutex.unlock();
 		loop_rate.sleep();
 		ros::spinOnce();
 	}
@@ -334,12 +341,14 @@ void SpeedCmdGenerator::getTransform()
 //力矩传感器回调函数
 void SpeedCmdGenerator::wrenchCallback(const geometry_msgs::WrenchStampedConstPtr &msg)
 {
+	// m_mutex.lock();
 	wrench_now[0] = msg->wrench.force.x;
 	wrench_now[1] = msg->wrench.force.y;
 	wrench_now[2] = msg->wrench.force.z;
 	wrench_now[3] = msg->wrench.torque.x;
 	wrench_now[4] = msg->wrench.torque.y;
 	wrench_now[5] = msg->wrench.torque.z;
+	// m_mutex.unlock();
 };
 
 //浮点数转string
@@ -393,8 +402,8 @@ void SpeedCmdGenerator::urMove()
 int main(int argc, char *argv[])
 {
 	ros::init(argc, argv, "speed_cmd_generator_node");
-	ros::AsyncSpinner spinner(2);
-	spinner.start();
+	// ros::AsyncSpinner spinner(2);
+	// spinner.start();
 	SpeedCmdGenerator speed_cmd_generator;
 	return 0;
 }
