@@ -37,7 +37,8 @@
 #include <kdl/trajectory_composite.hpp>
 
 const double velocity_limit = 0.5;
-const double desire_fz = -5;
+
+const double desire_fz = -10;
 const std::string PLANNING_GROUP = "manipulator";
 
 class SpeedCmdGenerator
@@ -47,18 +48,20 @@ public:
 	{
 		flag = true;
 
-		command_vel.resize(6,0);
-		pos_now.resize(7,0);
+		command_vel.resize(6, 0);
+		pos_now.resize(7, 0);
 
-		path = new KDL::Path_RoundedComposite(0.05, 0.01, new KDL::RotationalInterpolation_SingleAxis());
+		path = new KDL::Path_RoundedComposite(0.002, 0.001, new KDL::RotationalInterpolation_SingleAxis());
 
 		std::string pos = "vision_pose";
 		move_group.setNamedTarget(pos);
 		bool plan_success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-		if (!plan_success) return;
+		if (!plan_success)
+			return;
 		std::cout << "plan success" << std::endl;
 		bool execute_success = (move_group.execute(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-		if (!execute_success) return;
+		if (!execute_success)
+			return;
 		std::cout << "execute success" << std::endl;
 
 		ur_pub = nh.advertise<std_msgs::String>("ur_driver/URScript", 1000);
@@ -68,7 +71,8 @@ public:
 
 		ros::Duration(5).sleep();
 		ros::Rate loop_rate(25);
-		while (flag){
+		while (flag)
+		{
 			ros::spinOnce();
 			loop_rate.sleep();
 		};
@@ -79,10 +83,12 @@ public:
 		ros::Duration(5).sleep();
 		move_group.setNamedTarget(pos);
 		plan_success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-		if (!plan_success) return;
+		if (!plan_success)
+			return;
 		std::cout << "plan success" << std::endl;
 		execute_success = (move_group.execute(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-		if (!execute_success) return;
+		if (!execute_success)
+			return;
 		std::cout << "execute success" << std::endl;
 	}
 
@@ -90,7 +96,7 @@ private:
 	ros::NodeHandle nh;
 	ros::Subscriber pcl_sub, wrench_sub;
 	ros::Publisher ur_pub, pose_pub;
-	
+
 	tf::TransformListener listener;
 
 	std::vector<double> pos_now;
@@ -99,7 +105,7 @@ private:
 	std::vector<double> wrench_now;
 	std::vector<double> command_vel;
 	bool flag;
- 	std::mutex m_mutex;
+	std::mutex m_mutex;
 
 	moveit::planning_interface::MoveGroupInterface move_group;
 	moveit::planning_interface::MoveGroupInterface::Plan my_plan;
@@ -192,7 +198,7 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr &inpu
 		}
 		path->Finish();
 
-		KDL::VelocityProfile *velpref = new KDL::VelocityProfile_Trap(0.3, 0.1);
+		KDL::VelocityProfile *velpref = new KDL::VelocityProfile_Trap(0.01, 0.05);
 		velpref->SetProfile(0, path->PathLength());
 		traject = new KDL::Trajectory_Segment(path, velpref);
 
@@ -215,7 +221,8 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr &inpu
 	}
 };
 
-void SpeedCmdGenerator::moveToFirstPoint(){
+void SpeedCmdGenerator::moveToFirstPoint()
+{
 	ros::Rate loop_rate(50);
 	double distance = 1;
 	while (distance > 1e-4)
@@ -226,7 +233,9 @@ void SpeedCmdGenerator::moveToFirstPoint(){
 		this->getTransform();
 
 		double q_dot = 0;
-		for (int m = 3; m < 7; m++) q_dot += pos_now[m] * pos_desire[0][m];
+		for (int m = 3; m < 7; m++)
+			q_dot += pos_now[m] * pos_desire[0][m];
+
 		if (q_dot < 0)
 		{
 			for (int m = 3; m < 7; m++) pos_now[m] = -pos_now[m];
@@ -238,15 +247,16 @@ void SpeedCmdGenerator::moveToFirstPoint(){
 		skew_matrix << 0, -epsilon_d(2), epsilon_d(1), epsilon_d(2), 0, -epsilon_d(0), -epsilon_d(1), epsilon_d(0), 0;
 		Eigen::Matrix<double, 3, 1> orient_error = pos_desire[0][6] * epsilon - pos_now[6] * epsilon_d + skew_matrix * epsilon;
 
-
 		Eigen::Vector3d linear_speed, angular_speed;
 
-		for (int i = 0; i < 3; i++){
-			linear_speed(i) = 2 * (pos_desire[0][i] - pos_now[i]);
-		    angular_speed(i) = -1 * orient_error(i);
+		for (int i = 0; i < 3; i++)
+		{
+			linear_speed(i) = 1 * (pos_desire[0][i] - pos_now[i]);
+			angular_speed(i) = -1 * orient_error(i);
 		}
 
-		for (int i = 0; i < 3; i++){
+		for (int i = 0; i < 3; i++)
+		{
 			command_vel[i] = linear_speed(i);
 			command_vel[i + 3] = angular_speed(i);
 		}
@@ -260,42 +270,54 @@ void SpeedCmdGenerator::moveToFirstPoint(){
 void SpeedCmdGenerator::posCmdGenerator()
 {
 	moveToFirstPoint();
-	ros::Rate loop_rate(50);
-	ros::Time init_time=ros::Time::now();
-	double t=0;
-	while(t<traject->Duration()){
+	ros::Duration(2).sleep();
+	ros::Rate loop_rate(25);
+	ros::Time init_time = ros::Time::now();
+	double t = 0;
+	double last_error = 0;
+	double error_total = 0;
+	while (t < traject->Duration())
+	{
 		// m_mutex.lock();
 		this->getTransform();
-		
+
 		t = (ros::Time::now() - init_time).toSec();
-        KDL::Frame target_pose = traject->Pos(t);
-        KDL::Twist target_vel = traject->Vel(t);
+		KDL::Frame target_pose = traject->Pos(t);
+		KDL::Twist target_vel = traject->Vel(t);
 
-        double xd,yd,zd,wd;
-        target_pose.M.GetQuaternion(xd,yd,zd,wd);
+		double xd, yd, zd, wd;
+		target_pose.M.GetQuaternion(xd, yd, zd, wd);
 
-		double q_dot=pos_now[3]*xd+pos_now[4]*yd+pos_now[5]*zd+pos_now[6]*wd;
-        if(q_dot<0){
-			for (int m = 3; m < 7; m++) pos_now[m] = -pos_now[m];
-        }
-        Eigen::Matrix<double,3,1> epsilon, epsilon_d;                 
-		epsilon << pos_now[3], pos_now[4], pos_now[5];  
-        epsilon_d <<xd,yd,zd;    
-        Eigen::Matrix<double,3,3> skew_matrix;
-        skew_matrix << 0,-epsilon_d(2),epsilon_d(1),epsilon_d(2),0,-epsilon_d(0),-epsilon_d(1),epsilon_d(0),0;    
-        Eigen::Matrix<double,3,1> orient_error = wd * epsilon -  pos_now[6]* epsilon_d + skew_matrix * epsilon;  
+		double q_dot = pos_now[3] * xd + pos_now[4] * yd + pos_now[5] * zd + pos_now[6] * wd;
+		if (q_dot < 0)
+		{
+			for (int m = 3; m < 7; m++)
+				pos_now[m] = -pos_now[m];
+		}
+		Eigen::Matrix<double, 3, 1> epsilon, epsilon_d;
+		epsilon << pos_now[3], pos_now[4], pos_now[5];
+		epsilon_d << xd, yd, zd;
+		Eigen::Matrix<double, 3, 3> skew_matrix;
+		skew_matrix << 0, -epsilon_d(2), epsilon_d(1), epsilon_d(2), 0, -epsilon_d(0), -epsilon_d(1), epsilon_d(0), 0;
+		Eigen::Matrix<double, 3, 1> orient_error = wd * epsilon - pos_now[6] * epsilon_d + skew_matrix * epsilon;
 
 		Eigen::Vector3d linear_speed, angular_speed;
 
-        for (int i = 0; i < 3; i++){
-            linear_speed(i) = target_vel.vel.data[i]+1*(target_pose(i, 3) - pos_now[i]);
-            angular_speed(i) = target_vel.rot.data[i]-1*orient_error[i];
+		for (int i = 0; i < 3; i++)
+		{
+			linear_speed(i) = target_vel.vel.data[i] + 1 * (target_pose(i, 3) - pos_now[i]);
+			// angular_speed(i) = target_vel.rot.data[i];
+			angular_speed(i) = -0.1 * orient_error[i];
 		}
+		double error = -(desire_fz - wrench_now[2]);
 
 		linear_speed = rotation_matrix.transpose() * linear_speed;
-		linear_speed(2) = -0.002 * (desire_fz - wrench_now[2]);
+		linear_speed(2) = 0.004 * error + 0.004 * (error - last_error);
+		error_total += error;
+		last_error = error;
 		linear_speed = rotation_matrix * linear_speed;
-		for (int i = 0; i < 3; i++){
+		for (int i = 0; i < 3; i++)
+		{
 			command_vel[i] = linear_speed(i);
 			command_vel[i + 3] = angular_speed(i);
 		}
@@ -382,7 +404,7 @@ void SpeedCmdGenerator::urMove()
 	this->limitVelocity(command_vel);
 	std_msgs::String ur_script_msgs;
 	double time2move = 0.2;
-	double acc = 0.5;
+	double acc = 0.2;
 	std::string move_msg;
 	move_msg = "speedl([";
 	move_msg = move_msg + double2string(command_vel[0]) + ",";

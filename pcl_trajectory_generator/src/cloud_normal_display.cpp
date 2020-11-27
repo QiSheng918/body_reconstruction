@@ -78,7 +78,7 @@ void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 			Eigen::Vector3d norm2;
 			norm2<<-normal_vec[m][1],-normal_vec[m][2],-normal_vec[m][3];
 			norm2.normalize();
-			std::cout<<norm2[2]<<std::endl;
+			// std::cout<<norm2[2]<<std::endl;
 			Eigen::Vector3d n=norm1.cross(norm2);
 			// n.normalize();
 			double theta=atan2(n.norm(),norm1.dot(norm2));
