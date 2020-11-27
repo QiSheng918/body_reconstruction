@@ -37,7 +37,8 @@
 #include <kdl/trajectory_composite.hpp>
 
 const double velocity_limit = 0.5;
-const double desire_fz = -5;
+
+const double desire_fz = -10;
 const std::string PLANNING_GROUP = "manipulator";
 
 class SpeedCmdGenerator
@@ -50,7 +51,7 @@ public:
 		command_vel.resize(6,0);
 		pos_now.resize(7,0);
 
-		path = new KDL::Path_RoundedComposite(0.05, 0.01, new KDL::RotationalInterpolation_SingleAxis());
+		path = new KDL::Path_RoundedComposite(0.002, 0.001, new KDL::RotationalInterpolation_SingleAxis());
 
 		std::string pos = "vision_pose";
 		move_group.setNamedTarget(pos);
@@ -192,7 +193,7 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr &inpu
 		}
 		path->Finish();
 
-		KDL::VelocityProfile *velpref = new KDL::VelocityProfile_Trap(0.3, 0.1);
+		KDL::VelocityProfile *velpref = new KDL::VelocityProfile_Trap(0.01, 0.05);
 		velpref->SetProfile(0, path->PathLength());
 		traject = new KDL::Trajectory_Segment(path, velpref);
 
@@ -242,7 +243,7 @@ void SpeedCmdGenerator::moveToFirstPoint(){
 		Eigen::Vector3d linear_speed, angular_speed;
 
 		for (int i = 0; i < 3; i++){
-			linear_speed(i) = 2 * (pos_desire[0][i] - pos_now[i]);
+			linear_speed(i) = 1 * (pos_desire[0][i] - pos_now[i]);
 		    angular_speed(i) = -1 * orient_error(i);
 		}
 
@@ -260,9 +261,12 @@ void SpeedCmdGenerator::moveToFirstPoint(){
 void SpeedCmdGenerator::posCmdGenerator()
 {
 	moveToFirstPoint();
-	ros::Rate loop_rate(50);
+	ros::Duration(2).sleep();
+	ros::Rate loop_rate(25);
 	ros::Time init_time=ros::Time::now();
 	double t=0;
+	double last_error=0;
+	double error_total=0;
 	while(t<traject->Duration()){
 		// m_mutex.lock();
 		this->getTransform();
@@ -289,11 +293,16 @@ void SpeedCmdGenerator::posCmdGenerator()
 
         for (int i = 0; i < 3; i++){
             linear_speed(i) = target_vel.vel.data[i]+1*(target_pose(i, 3) - pos_now[i]);
-            angular_speed(i) = target_vel.rot.data[i]-1*orient_error[i];
-		}
+            // angular_speed(i) = target_vel.rot.data[i];
+			angular_speed(i) = -0.1*orient_error[i];
 
+		}
+		double error=-(desire_fz - wrench_now[2]);
+		
 		linear_speed = rotation_matrix.transpose() * linear_speed;
-		linear_speed(2) = -0.002 * (desire_fz - wrench_now[2]);
+		linear_speed(2) = 0.004 * error+0.004*(error-last_error);
+		error_total+=error;
+		last_error=error;
 		linear_speed = rotation_matrix * linear_speed;
 		for (int i = 0; i < 3; i++){
 			command_vel[i] = linear_speed(i);
@@ -382,7 +391,7 @@ void SpeedCmdGenerator::urMove()
 	this->limitVelocity(command_vel);
 	std_msgs::String ur_script_msgs;
 	double time2move = 0.2;
-	double acc = 0.5;
+	double acc = 0.2;
 	std::string move_msg;
 	move_msg = "speedl([";
 	move_msg = move_msg + double2string(command_vel[0]) + ",";
