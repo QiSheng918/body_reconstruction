@@ -73,6 +73,7 @@ public:
 		ros::Rate loop_rate(25);
 		while (flag)
 		{
+			this->getTransform();
 			ros::spinOnce();
 			loop_rate.sleep();
 		};
@@ -175,7 +176,7 @@ void SpeedCmdGenerator::pclCallback(const sensor_msgs::PointCloud2ConstPtr &inpu
 				std::vector<double> temp(7, 0);
 				temp[0] = x;
 				temp[1] = y;
-				temp[2] = normal_vec[m][0] / normal_vec[m][4] + 0.02;
+				temp[2] = normal_vec[m][0] / normal_vec[m][4] + 0.04;
 				temp[3] = q.x();
 				temp[4] = q.y();
 				temp[5] = q.z();
@@ -312,8 +313,13 @@ void SpeedCmdGenerator::posCmdGenerator()
 		double error = -(desire_fz - wrench_now[2]);
 
 		linear_speed = rotation_matrix.transpose() * linear_speed;
-		linear_speed(2) = 0.004 * error + 0.004 * (error - last_error);
-		error_total += error;
+		if(fabs(error)<2) error_total += error;
+
+		// linear_speed(2) = 0.004 * error + 0.004 * (error - last_error);
+
+		linear_speed(2) = 0.004 * error + 0.004 * (error - last_error)+0.00001 * error_total;
+
+		
 		last_error = error;
 		linear_speed = rotation_matrix * linear_speed;
 		for (int i = 0; i < 3; i++)
